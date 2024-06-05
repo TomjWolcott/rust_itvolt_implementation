@@ -2,56 +2,34 @@ use itertools::Itertools;
 use rgsl::legendre::polynomials::legendre_Pl;
 use rgsl::numerical_differentiation::{deriv_central};
 
-#[allow(dead_code)]
-pub enum QuadratureType {
-    Trapezoidal,
-    // Simpson,
-    // Gauss,
-    Lobatto,
-}
+pub fn gauss_lobatto_quad_points(num_steps: usize, from: f64, to: f64) -> Vec<f64> {
+    // let legendre_poly = |x: f64| legendre_Pl(num_steps as i32 - 1, x.clamp(-1.0, 1.0));
 
-#[allow(dead_code)]
-pub fn get_quad_points(
-    ty: QuadratureType, 
-    from: f64, 
-    to: f64, 
-    num_points: usize
-) -> Vec<f64> {
-    match ty {
-        QuadratureType::Trapezoidal => {
-            // let delta = (to - from) / num_points as f64;
+    let legendre_poly_deriv = |x: f64| {
+        (0..=(num_steps / 2 - 1)).map(|i| {
+            let n = (num_steps % 2 + 2 * i) as i32;
 
-            (0..num_points).map(|i| (
-                from + (i as f64 / num_points as f64) * (to - from)
-                // if i == 0 || i == num_points - 1 { delta / 2.0 } else { delta }
-            )).collect()
-        },
-        QuadratureType::Lobatto => {
-            todo!()
-        }
-    }
-}
-
-pub fn gauss_lobatto_quad(num_steps: usize, from: f64, to: f64) -> Vec<f64> {
-    let legendre_poly = |x: f64| legendre_Pl(num_steps as i32 - 1, x.clamp(-1.0, 1.0));
-
-    let legendre_poly_deriv = |x|  {
-        deriv_central(legendre_poly, x, 1e-4).unwrap().0
+            (2.0 * n as f64 + 1.0) * legendre_Pl(n, x.clamp(-1.0, 1.0))
+        }).sum()
     };
 
-    let intervals = 3 * num_steps;
+    // let legendre_poly_deriv = |x|  {
+    //     deriv_central(legendre_poly, x, 1e-8).unwrap().0
+    // };
+
+    let intervals = 100 * num_steps;
 
     let mut quad_points: Vec<f64> = (0..=intervals)
-        .map(|i| 2.0 * (i as f64) / intervals as f64 - 1.0)
+        .map(|i| 2.0 * (i as f64) / intervals as f64 - 1.0001)
         .tuple_windows()
-        .filter(|(x1, x2)| legendre_poly_deriv(*x1) * legendre_poly_deriv(*x2) <= 0.0)
+        .filter(|(x1, x2)| legendre_poly_deriv(*x1) * legendre_poly_deriv(*x2) < 0.0)
         .map(|(x1, x2)| {
             let mut x = (x1 + x2) / 2.0;
-            let mut prev_x = x + 2.0;
 
-            while (x - prev_x).abs() > 1e-10 {
-                prev_x = x;
-                x = x - legendre_poly_deriv(x) / deriv_central(legendre_poly_deriv, x, 1e-2).unwrap().0
+            for _ in 0..100 {
+                let prev_x = x;
+                x = x - legendre_poly_deriv(x) / deriv_central(legendre_poly_deriv, x, 1e-8).unwrap().0;
+                if (x - prev_x).abs() > 1e-11 { break; }
             }
 
             x
@@ -66,7 +44,7 @@ pub fn gauss_lobatto_quad(num_steps: usize, from: f64, to: f64) -> Vec<f64> {
 
 #[test]
 fn lobatto_points() {
-    let quad_points = gauss_lobatto_quad(5, -1.0, 1.0);
+    let quad_points = gauss_lobatto_quad_points(3, -1.0, 1.0);
 
     println!("{:?}", quad_points);
 }

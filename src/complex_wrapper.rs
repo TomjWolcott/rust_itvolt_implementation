@@ -1,6 +1,7 @@
 use rgsl::types::ComplexF64;
 use std::{iter::Sum, ops::*};
 
+/// This is a wrapper around rgsl::types::ComplexF64, so I can use operator overloading on complex numbers
 #[derive(Clone, Copy)]
 pub struct Complex(ComplexF64);
 
@@ -88,7 +89,7 @@ impl Div for Complex {
 
 impl std::fmt::Display for Complex {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "({:.4} + {:.4}i)", self.0.real(), self.0.imaginary())
+        write!(f, "{:.4} + {:.4}i", self.0.real(), self.0.imaginary())
     }
 }
 
@@ -97,8 +98,8 @@ impl Complex {
         Self(self.0.pow(&n.0))
     }
 
-    pub fn len(self) -> f64 {
-        self.0.mul(&self.0.conjugate()).real().sqrt()
+    pub fn magnitude(self) -> f64 {
+        (self.0.dat[0] * self.0.dat[0] + self.0.dat[1] * self.0.dat[1]).sqrt()
     }
 
     pub fn exp(self) -> Self {
